@@ -25,6 +25,11 @@ async function request(endpoint, options = {}) {
   const data = await res.json();
 
   if (!res.ok) {
+    // If the backend restarted and the user no longer exists in memory, or token is invalid
+    if (res.status === 401 || data.error === 'User not found') {
+      clearToken();
+      window.location.href = '/login';
+    }
     throw new Error(data.error || `Request failed with status ${res.status}`);
   }
   return data;
