@@ -25,10 +25,14 @@ async function request(endpoint, options = {}) {
   const data = await res.json();
 
   if (!res.ok) {
-    // If the backend restarted and the user no longer exists in memory, or token is invalid
-    if (res.status === 401 || data.error === 'User not found') {
-      clearToken();
-      window.location.href = '/login';
+    // If the backend restarted or the token is invalid/expired
+    if (res.status === 401 || res.status === 403) {
+      const err = data.error;
+      if (err === 'User session expired or user deleted.' || err === 'User not found' || err === 'Invalid or expired token.' || err === 'Access denied. No token provided.') {
+        clearToken();
+        window.location.href = '/login';
+        return;
+      }
     }
     throw new Error(data.error || `Request failed with status ${res.status}`);
   }

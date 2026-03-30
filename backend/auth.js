@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { db } from './db.js';
 
 const SECRET_KEY = 'bloodlink_secret_key_2026_siem';
 
@@ -46,5 +47,10 @@ export function authenticateToken(req, res, next) {
   if (!payload) return res.status(403).json({ error: 'Invalid or expired token.' });
 
   req.user = payload;
+  
+  // Also check if they exist in the volatile memory db 
+  const userExists = db.users?.find(u => u.id === payload.id);
+  if (!userExists) return res.status(401).json({ error: 'User session expired or user deleted.' });
+
   next();
 }
