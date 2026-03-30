@@ -2,7 +2,7 @@
 // Blood Donor Finder — Centralized API Client
 // ============================================
 
-const API_BASE = 'https://blood-donor-backend-6kvc.onrender.com/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 function getToken() {
   return localStorage.getItem('bdf_token');

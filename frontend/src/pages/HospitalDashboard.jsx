@@ -93,7 +93,7 @@ export default function HospitalDashboard() {
   const MENU = [
     { id: 'overview', icon: '📊', label: 'Overview' },
     { id: 'requests', icon: '🩸', label: 'My Requests' },
-    { id: 'donors', icon: '👥', label: 'Available Donors' },
+    { id: 'donors', icon: '👥', label: 'Donor Directory' },
     { id: 'notifications', icon: '🔔', label: `Notifications${unreadCount > 0 ? ` (${unreadCount})` : ''}` },
     { id: 'profile', icon: '🏥', label: 'Hospital Profile' },
   ];
@@ -248,7 +248,7 @@ export default function HospitalDashboard() {
         {tab === 'donors' && (
           <div className="fade-in">
             <div className="section-header">
-              <div className="section-title">Available Donors</div>
+              <div className="section-title">Donor Directory</div>
               <span className="badge badge-green">{donors.filter(d => d.isAvailable && d.canDonate).length} available</span>
             </div>
             {donors.length === 0 ? (
