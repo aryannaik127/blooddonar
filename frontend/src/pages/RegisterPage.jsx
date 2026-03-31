@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { isUsingLocalhost, getApiBaseUrl } from '../services/api.js';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
@@ -14,6 +15,13 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [locLoading, setLocLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [configWarning, setConfigWarning] = useState(null);
+
+  useEffect(() => {
+    if (isUsingLocalhost()) {
+      setConfigWarning(`The app is pointing to ${getApiBaseUrl()} but you're on a deployed site. The VITE_API_URL environment variable needs to be set in Vercel.`);
+    }
+  }, []);
 
   const [form, setForm] = useState({
     name: '', email: '', password: '', confirmPassword: '',
@@ -93,7 +101,13 @@ export default function RegisterPage() {
       const userRole = data.user?.role;
       navigate(userRole === 'hospital' ? '/hospital-dashboard' : '/donor-dashboard');
     } catch (err) {
-      setErrors({ email: err.message || 'Registration failed' });
+      const msg = err.message || 'Registration failed';
+      // Network/connection errors go to a general error field, not email
+      if (msg.includes('Cannot connect') || msg.includes('Network error') || msg.includes('not configured') || msg.includes('invalid response')) {
+        setErrors({ general: msg });
+      } else {
+        setErrors({ email: msg });
+      }
     } finally {
       setLoading(false);
     }
@@ -119,6 +133,22 @@ export default function RegisterPage() {
 
         <form className="card card-glow" onSubmit={handleSubmit}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+            {/* Backend configuration warning */}
+            {configWarning && (
+              <div style={{
+                background: 'rgba(215,38,61,0.08)',
+                border: '1px solid rgba(215,38,61,0.2)',
+                borderRadius: 12,
+                padding: '12px 16px',
+                fontSize: 13,
+                color: 'var(--red)',
+                lineHeight: 1.5
+              }}>
+                <strong>⚠️ Connection Issue</strong>
+                <p style={{ marginTop: 4 }}>{configWarning}</p>
+              </div>
+            )}
 
             {/* Donor-specific fields */}
             {role === 'donor' && (
@@ -217,6 +247,19 @@ export default function RegisterPage() {
                 📌 Location is used to match you with nearby {role === 'donor' ? 'requests' : 'donors'}. We ask for your permission before accessing GPS.
               </div>
             </div>
+
+            {/* General errors (connection issues, etc.) */}
+            {errors.general && (
+              <div className="form-error" style={{
+                textAlign: 'center',
+                padding: '10px 12px',
+                fontSize: 12,
+                lineHeight: 1.5,
+                whiteSpace: 'pre-wrap'
+              }}>
+                {errors.general}
+              </div>
+            )}
 
             <button className="btn btn-primary" style={{ width: '100%', padding: 14 }} disabled={loading}>
               {loading ? <span className="spinner" /> : 'Create Account →'}

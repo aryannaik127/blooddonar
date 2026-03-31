@@ -1,13 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { isUsingLocalhost, getApiBaseUrl } from '../services/api.js';
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, backendError } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [configWarning, setConfigWarning] = useState(null);
+
+  useEffect(() => {
+    if (isUsingLocalhost()) {
+      setConfigWarning(`⚠️ The app is pointing to ${getApiBaseUrl()} but you're on a deployed site. The VITE_API_URL environment variable needs to be set in Vercel to your Render backend URL.`);
+    }
+  }, []);
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); setError(''); }
 
@@ -41,6 +49,23 @@ export default function LoginPage() {
           <p style={{ color: 'var(--muted)', marginTop: 6 }}>Sign in to your account</p>
         </div>
 
+        {/* Backend configuration warning */}
+        {(configWarning || backendError) && (
+          <div style={{
+            background: 'rgba(215,38,61,0.08)',
+            border: '1px solid rgba(215,38,61,0.2)',
+            borderRadius: 12,
+            padding: '12px 16px',
+            marginBottom: 16,
+            fontSize: 13,
+            color: 'var(--red)',
+            lineHeight: 1.5
+          }}>
+            <strong>⚠️ Connection Issue</strong>
+            <p style={{ marginTop: 4 }}>{configWarning || backendError}</p>
+          </div>
+        )}
+
         <form className="card card-glow" onSubmit={handleSubmit}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div className="form-group">
@@ -60,7 +85,17 @@ export default function LoginPage() {
               />
             </div>
 
-            {error && <div className="form-error" style={{ textAlign: 'center' }}>{error}</div>}
+            {error && (
+              <div className="form-error" style={{
+                textAlign: 'center',
+                padding: error.length > 60 ? '10px 12px' : undefined,
+                fontSize: error.length > 80 ? 12 : undefined,
+                lineHeight: error.length > 60 ? 1.5 : undefined,
+                whiteSpace: 'pre-wrap'
+              }}>
+                {error}
+              </div>
+            )}
 
             <button className="btn btn-primary" style={{ width: '100%', padding: 14 }} disabled={loading}>
               {loading ? <span className="spinner" /> : 'Sign In →'}

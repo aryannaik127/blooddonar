@@ -8,33 +8,51 @@ const listeners = new Set();
 export function initializeSocket(userId) {
   if (socket) disconnectSocket();
 
+  // Don't try to connect to localhost from a deployed site
+  if (SOCKET_URL.includes('localhost') && typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
+    console.warn('⚠️ Socket.io: Skipping connection — VITE_SOCKET_URL not configured for production');
+    return;
+  }
 
-  socket = io(SOCKET_URL, { transports: ['websocket', 'polling'] });
+  try {
+    socket = io(SOCKET_URL, {
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: 5,
+      reconnectionDelay: 2000,
+      timeout: 10000
+    });
 
-  socket.on('connect', () => {
-    console.log('🔌 Socket connected:', socket.id);
-    socket.emit('register-user', userId);
-  });
+    socket.on('connect', () => {
+      console.log('🔌 Socket connected:', socket.id);
+      socket.emit('register-user', userId);
+    });
 
-  // Listen for personal notifications
-  socket.on(`notification_${userId}`, (notification) => {
-    console.log('🔔 Notification received:', notification);
-    listeners.forEach(cb => cb(notification));
-  });
+    // Listen for personal notifications
+    socket.on(`notification_${userId}`, (notification) => {
+      console.log('🔔 Notification received:', notification);
+      listeners.forEach(cb => cb(notification));
+    });
 
-  // Listen for new requests (global broadcast)
-  socket.on('new-request', (data) => {
-    listeners.forEach(cb => cb({ type: 'new-request', ...data }));
-  });
+    // Listen for new requests (global broadcast)
+    socket.on('new-request', (data) => {
+      listeners.forEach(cb => cb({ type: 'new-request', ...data }));
+    });
 
-  // Listen for request updates
-  socket.on('request-closed', (data) => {
-    listeners.forEach(cb => cb({ type: 'request-closed', ...data }));
-  });
+    // Listen for request updates
+    socket.on('request-closed', (data) => {
+      listeners.forEach(cb => cb({ type: 'request-closed', ...data }));
+    });
 
-  socket.on('disconnect', () => {
-    console.log('🔌 Socket disconnected');
-  });
+    socket.on('connect_error', (err) => {
+      console.warn('🔌 Socket connection error:', err.message);
+    });
+
+    socket.on('disconnect', () => {
+      console.log('🔌 Socket disconnected');
+    });
+  } catch (err) {
+    console.warn('🔌 Failed to initialize socket:', err.message);
+  }
 }
 
 export function disconnectSocket() {

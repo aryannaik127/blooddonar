@@ -4,6 +4,11 @@
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+// Log the API base URL in development for debugging
+if (import.meta.env.DEV) {
+  console.log('🔗 API Base URL:', API_BASE);
+}
+
 function getToken() {
   return localStorage.getItem('bdf_token');
 }
@@ -16,13 +21,42 @@ export function clearToken() {
   localStorage.removeItem('bdf_token');
 }
 
+/**
+ * Returns a user-friendly error message for network-level failures.
+ */
+function getFriendlyNetworkError(err) {
+  const msg = err.message || '';
+  if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('ERR_CONNECTION_REFUSED') || msg.includes('Load failed')) {
+    // Check if we're hitting localhost in production
+    if (API_BASE.includes('localhost') && typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
+      return 'Backend server is not configured. The app is trying to reach localhost from a deployed site. Please set the VITE_API_URL environment variable in Vercel to your Render backend URL.';
+    }
+    return 'Cannot connect to the server. The backend may be starting up (takes ~30s on free tier) or is offline. Please try again in a moment.';
+  }
+  return null;
+}
+
 async function request(endpoint, options = {}) {
   const token = getToken();
   const headers = { 'Content-Type': 'application/json', ...options.headers };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
-  const data = await res.json();
+  let res;
+  try {
+    res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
+  } catch (err) {
+    // Network-level error (server unreachable, CORS, DNS, etc.)
+    const friendly = getFriendlyNetworkError(err);
+    throw new Error(friendly || `Network error: ${err.message}`);
+  }
+
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    // Server returned non-JSON (e.g. HTML error page, 502 gateway)
+    throw new Error(`Server returned an invalid response (HTTP ${res.status}). The backend may be restarting.`);
+  }
 
   if (!res.ok) {
     // If the backend restarted or the token is invalid/expired
@@ -37,6 +71,24 @@ async function request(endpoint, options = {}) {
     throw new Error(data.error || `Request failed with status ${res.status}`);
   }
   return data;
+}
+
+// ── Health Check ─────────────────────────────
+export async function checkBackendHealth() {
+  try {
+    const res = await fetch(`${API_BASE}/stats`, { signal: AbortSignal.timeout(8000) });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export function getApiBaseUrl() {
+  return API_BASE;
+}
+
+export function isUsingLocalhost() {
+  return API_BASE.includes('localhost') && typeof window !== 'undefined' && !window.location.hostname.includes('localhost');
 }
 
 // ── Auth ──────────────────────────────────
