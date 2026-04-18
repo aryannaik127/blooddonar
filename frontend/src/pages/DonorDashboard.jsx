@@ -30,7 +30,7 @@ export default function DonorDashboard() {
   const fetchData = useCallback(async () => {
     try {
       const [reqs, donList, notifs, st, me] = await Promise.all([
-        api.getAllRequests(),
+        api.getRequests(),
         api.getDonations(),
         api.getNotifications(),
         api.getStats(),
