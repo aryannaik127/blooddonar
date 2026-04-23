@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import * as api from '../services/api.js';
 
@@ -28,10 +28,18 @@ function BloodDropSVG() {
 
 export default function LandingPage() {
   const [stats, setStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  const loadStats = useCallback(() => {
+    setStatsLoading(true);
+    api.getStats()
+      .then(data => { setStats(data); setStatsLoading(false); })
+      .catch(() => { setStats({ totalDonors: 0, activeRequests: 0, totalDonations: 0, availableDonors: 0 }); setStatsLoading(false); });
+  }, []);
 
   useEffect(() => {
-    api.getStats().then(setStats).catch(() => {});
-  }, []);
+    loadStats();
+  }, [loadStats]);
 
   return (
     <div>
@@ -72,10 +80,10 @@ export default function LandingPage() {
       <div style={{ padding: '48px 24px', maxWidth: 900, margin: '0 auto' }}>
         <div className="stats-grid">
           {[
-            { icon: '💉', value: stats ? stats.totalDonors : '—', label: 'Active Donors' },
-            { icon: '🏥', value: stats ? stats.activeRequests : '—', label: 'Active Requests' },
-            { icon: '❤️', value: stats ? stats.totalDonations : '—', label: 'Donations Made' },
-            { icon: '⚡', value: stats ? stats.availableDonors : '—', label: 'Available Now' }
+            { icon: '💉', value: statsLoading ? '...' : stats?.totalDonors ?? 0, label: 'Active Donors' },
+            { icon: '🏥', value: statsLoading ? '...' : stats?.activeRequests ?? 0, label: 'Active Requests' },
+            { icon: '❤️', value: statsLoading ? '...' : stats?.totalDonations ?? 0, label: 'Donations Made' },
+            { icon: '⚡', value: statsLoading ? '...' : stats?.availableDonors ?? 0, label: 'Available Now' }
           ].map(s => (
             <div key={s.label} className="stat-card">
               <div style={{ fontSize: 32 }}>{s.icon}</div>
@@ -109,30 +117,6 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="footer">
-        <div style={{ marginBottom: 16 }}>
-          <div className="nav-brand" style={{ justifyContent: 'center', marginBottom: 8 }}>
-            <span className="drop">🩸</span>
-            <span style={{ color: 'var(--red)' }}>Blood</span>
-            <span>Donor Finder</span>
-          </div>
-          <p style={{ color: 'var(--muted)', fontSize: 13 }}>
-            Connecting donors with those in need — saving lives, one drop at a time.
-          </p>
-        </div>
-        <hr className="divider" />
-        <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-          <div style={{ marginBottom: 8, fontWeight: 600, color: 'var(--text)' }}>Developed by</div>
-          <div className="footer-devs">
-            {['Aryan Naik', 'Hitesh Wagh', 'Vaibhav Bawaskar', 'Agastya Aher'].map(n => (
-              <span key={n} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ color: 'var(--red)' }}>♥</span> {n}
-              </span>
-            ))}
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

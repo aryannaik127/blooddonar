@@ -20,6 +20,7 @@ export default function DonorDashboard() {
   const [stats, setStats] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [toggleLoading, setToggleLoading] = useState(false);
   const [toast, setToast] = useState(null);
 
   const showToast = useCallback((type, title, msg) => {
@@ -66,13 +67,16 @@ export default function DonorDashboard() {
   }
 
   async function toggleAvailability() {
+    setToggleLoading(true);
     try {
-      await api.toggleAvailability();
+      const result = await api.toggleAvailability();
       await fetchData();
       await refreshUser();
-      showToast('success', 'Updated', 'Availability status changed.');
+      showToast('success', 'Updated', result.isAvailable ? 'You are now available for donation.' : 'You are now marked as unavailable.');
     } catch (err) {
       showToast('error', 'Error', err.message);
+    } finally {
+      setToggleLoading(false);
     }
   }
 
@@ -133,8 +137,9 @@ export default function DonorDashboard() {
             className={`btn ${profile?.isAvailable ? 'btn-primary' : 'btn-secondary'}`}
             style={{ width: '100%' }}
             onClick={toggleAvailability}
+            disabled={toggleLoading}
           >
-            {profile?.isAvailable ? '✅ Available' : '❌ Set Available'}
+            {toggleLoading ? <span className="spinner" style={{ width: 18, height: 18 }} /> : profile?.isAvailable ? '✅ Available' : '❌ Set Available'}
           </button>
         </div>
       </div>

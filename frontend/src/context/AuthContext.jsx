@@ -16,11 +16,15 @@ export function AuthProvider({ children }) {
     api.getMe()
       .then(data => { setUser(data); setBackendError(null); })
       .catch((err) => {
-        // Don't clear token on network errors — the backend might just be waking up
-        if (err.message.includes('Cannot connect') || err.message.includes('Network error') || err.message.includes('not configured')) {
-          setBackendError(err.message);
-          console.warn('⚠️ Backend unreachable during session restore:', err.message);
+        const msg = err.message || '';
+        // Only preserve token on genuine network errors (backend waking up / unreachable)
+        const isNetworkError = msg.includes('Cannot connect') || msg.includes('Network error') || msg.includes('not configured') || msg.includes('invalid response');
+        if (isNetworkError) {
+          setBackendError(msg);
+          console.warn('⚠️ Backend unreachable during session restore:', msg);
         } else {
+          // Token is invalid, expired, or user was wiped from in-memory DB — clear it
+          console.warn('🔒 Session invalid, clearing token:', msg);
           api.clearToken();
         }
       })
